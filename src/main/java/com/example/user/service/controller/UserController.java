@@ -1,6 +1,7 @@
 package com.example.user.service.controller;
 
 import com.example.user.service.dto.CreateUserDto;
+import com.example.user.service.dto.UpdateUserDto;
 import com.example.user.service.dto.UserShortInfoDto;
 import com.example.user.service.service.UserService;
 import jakarta.validation.Valid;
@@ -37,6 +38,11 @@ public class UserController {
     @GetMapping
     public Set<UserShortInfoDto> read() {
         return service.read();
+    }
+
+    @PutMapping("/{id}")
+    public UUID update(@PathVariable UUID id, @RequestBody UpdateUserDto dto) {
+        return service.update(id, dto);
     }
 
 }

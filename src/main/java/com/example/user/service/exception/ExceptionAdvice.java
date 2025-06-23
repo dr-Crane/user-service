@@ -47,4 +47,16 @@ public class ExceptionAdvice {
                 .build();
     }
 
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ExceptionHandler(UserNotFoundException.class)
+    public ExceptionResponseDto handle(UserNotFoundException exception, HttpServletRequest request) {
+        log.error(exception.getMessage());
+        return ExceptionResponseDto.builder()
+                .status(HttpStatus.NOT_FOUND.value())
+                .timestamp(Instant.now())
+                .message(exception.getMessage())
+                .path(request.getRequestURI())
+                .build();
+    }
+
 }
