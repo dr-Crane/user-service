@@ -1,18 +1,20 @@
 package com.example.user.service.service;
 
 import com.example.user.service.dal.entity.UserEntity;
+import com.example.user.service.dal.enums.Status;
 import com.example.user.service.dal.repository.UserRepository;
 import com.example.user.service.dto.CreateUserDto;
 import com.example.user.service.dto.UpdateUserDto;
 import com.example.user.service.dto.UserShortInfoDto;
-import com.example.user.service.exception.ErrorMessages;
-import com.example.user.service.exception.UserNotFoundException;
+import com.example.user.service.exception.ExceptionFactory;
 import com.example.user.service.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.BooleanUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -27,22 +29,21 @@ public class UserService {
 
     @Transactional
     public UUID create(CreateUserDto dto) {
-        UserEntity entity = mapper.map(dto);
-        entity.setPassword(encoder.encode(dto.getPassword()));
+        UserEntity entity = mapper.map(dto, encoder);
         return repository.save(entity).getId();
     }
 
     @Transactional(readOnly = true)
     public UserShortInfoDto read(UUID id) {
         return repository.findById(id).map(mapper::map).orElseThrow(
-                () -> new UserNotFoundException(ErrorMessages.USER_NOT_FOUND_MESSAGE.formatted(id.toString()))
+                () -> ExceptionFactory.createUserNotFoundException(id.toString())
         );
     }
 
     @Transactional(readOnly = true)
     public UserShortInfoDto read(String email) {
         return repository.findByEmail(email).map(mapper::map).orElseThrow(
-                () -> new UserNotFoundException(ErrorMessages.USER_NOT_FOUND_MESSAGE.formatted(email))
+                () -> ExceptionFactory.createUserNotFoundException(email)
         );
     }
 
@@ -53,10 +54,28 @@ public class UserService {
 
     @Transactional
     public UUID update(UUID id, UpdateUserDto dto) {
-        UserEntity user = repository.findById(id).orElseThrow(
-                () -> new UserNotFoundException(ErrorMessages.USER_NOT_FOUND_MESSAGE.formatted(id.toString()))
+        UserEntity user = getUserEntity(id);
+        mapper.update(user, dto, encoder);
+        repository.save(user);
+        return id;
+    }
+
+    @Transactional
+    public void delete(UUID id, Boolean isHardDelete) {
+        if (Objects.isNull(isHardDelete) || BooleanUtils.isFalse(isHardDelete)) {
+            UserEntity user = getUserEntity(id);
+            user.setStatus(Status.DELETED);
+            repository.save(user);
+        }
+        if (BooleanUtils.isTrue(isHardDelete)) {
+            repository.deleteById(id);
+        }
+    }
+
+    private UserEntity getUserEntity(UUID id) {
+        return repository.findById(id).orElseThrow(
+                () -> ExceptionFactory.createUserNotFoundException(id.toString())
         );
-        return null;
     }
 
 }

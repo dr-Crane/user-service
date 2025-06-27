@@ -45,4 +45,13 @@ public class UserController {
         return service.update(id, dto);
     }
 
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(
+            @PathVariable UUID id,
+            @RequestParam(name = "hard", required = false) Boolean isHardDelete
+    ) {
+        service.delete(id, isHardDelete);
+    }
+
 }
