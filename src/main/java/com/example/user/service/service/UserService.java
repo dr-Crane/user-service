@@ -7,9 +7,14 @@ import com.example.user.service.dto.CreateUserDto;
 import com.example.user.service.dto.UpdateUserDto;
 import com.example.user.service.dto.UserShortInfoDto;
 import com.example.user.service.exception.ExceptionFactory;
+import com.example.user.service.exception.UserNotFoundException;
 import com.example.user.service.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.BooleanUtils;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +26,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class UserService {
+public class UserService implements UserDetailsService {
 
     private final UserRepository repository;
     private final UserMapper mapper;
@@ -70,6 +75,19 @@ public class UserService {
         if (BooleanUtils.isTrue(isHardDelete)) {
             repository.deleteById(id);
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        UserEntity user = repository.findByEmail(email).orElseThrow(
+                () -> new UserNotFoundException(email)
+        );
+        return User.builder()
+                .username(user.getEmail())
+                .password(user.getPassword())
+                .roles(user.getRole().name())
+                .build();
     }
 
     private UserEntity getUserEntity(UUID id) {
