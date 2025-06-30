@@ -7,10 +7,12 @@ import com.example.user.service.dto.CreateUserDto;
 import com.example.user.service.dto.UpdateUserDto;
 import com.example.user.service.dto.UserShortInfoDto;
 import com.example.user.service.exception.ExceptionFactory;
+import com.example.user.service.exception.ResourceForbiddenException;
 import com.example.user.service.exception.UserNotFoundException;
 import com.example.user.service.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.BooleanUtils;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -59,11 +61,15 @@ public class UserService implements UserDetailsService {
 
     @Transactional
     public UUID update(UUID id, UpdateUserDto dto) {
+        checkUserInfo(id, dto);
+
         UserEntity user = getUserEntity(id);
         mapper.update(user, dto, encoder);
         repository.save(user);
+
         return id;
     }
+
 
     @Transactional
     public void delete(UUID id, Boolean isHardDelete) {
@@ -94,6 +100,27 @@ public class UserService implements UserDetailsService {
         return repository.findById(id).orElseThrow(
                 () -> ExceptionFactory.createUserNotFoundException(id.toString())
         );
+    }
+
+    private void checkUserInfo(UUID userId, UpdateUserDto dto) {
+        if (isAdmin()) {
+            return;
+        }
+        if (Objects.nonNull(dto.getRole())) {
+            throw new ResourceForbiddenException();
+        }
+
+        String email = ((User) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername();
+        boolean isCurrentUser = getUserEntity(userId).getEmail().equals(email);
+        if (!isCurrentUser) {
+            throw new ResourceForbiddenException();
+        }
+    }
+
+    private boolean isAdmin() {
+        return ((User) SecurityContextHolder.getContext().getAuthentication().getPrincipal())
+                .getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
     }
 
 }

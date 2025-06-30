@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 
 @Slf4j
@@ -55,6 +56,17 @@ public class ExceptionAdvice {
                 .status(HttpStatus.NOT_FOUND.value())
                 .timestamp(Instant.now())
                 .message(exception.getMessage())
+                .path(request.getRequestURI())
+                .build();
+    }
+
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    @ExceptionHandler(ResourceForbiddenException.class)
+    public ExceptionResponseDto handle(ResourceForbiddenException exception, HttpServletRequest request) {
+        log.error(Arrays.toString(exception.getStackTrace()));
+        return ExceptionResponseDto.builder()
+                .status(HttpStatus.FORBIDDEN.value())
+                .timestamp(Instant.now())
                 .path(request.getRequestURI())
                 .build();
     }
